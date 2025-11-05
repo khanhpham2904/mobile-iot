@@ -2284,11 +2284,31 @@ const Settings = () => (
   </div>
 );
 
+// Password validation helper
+const validatePassword = (password) => {
+  if (!password || password.length < 8) {
+    return 'Password must be at least 8 characters long';
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter';
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain at least one lowercase letter';
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return 'Password must contain at least one special character';
+  }
+  return null;
+};
+
 // Profile Management Component
 const ProfileManagement = ({ profile, setProfile, loading, setLoading, user }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
+  const [passwordForm] = Form.useForm();
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -2360,6 +2380,42 @@ const ProfileManagement = ({ profile, setProfile, loading, setLoading, user }) =
       message.error('Failed to update profile: ' + (error.message || 'Unknown error'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (values) => {
+    const { oldPassword, newPassword, confirmPassword } = values;
+    
+    // Validate new password
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      message.error(passwordError);
+      return;
+    }
+    
+    // Check if passwords match
+    if (newPassword !== confirmPassword) {
+      message.error('New password and confirm password do not match');
+      return;
+    }
+    
+    // Check if new password is same as old password
+    if (oldPassword === newPassword) {
+      message.error('New password must be different from old password');
+      return;
+    }
+    
+    try {
+      setChangingPassword(true);
+      await authAPI.changePassword(oldPassword, newPassword);
+      message.success('Password changed successfully');
+      setChangePasswordModalVisible(false);
+      passwordForm.resetFields();
+    } catch (error) {
+      console.error('Error changing password:', error);
+      message.error('Failed to change password: ' + (error.message || 'Unknown error'));
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -2501,6 +2557,19 @@ const ProfileManagement = ({ profile, setProfile, loading, setLoading, user }) =
                         <Text>{profile.createdAt ? formatDateTimeDisplay(profile.createdAt) : 'N/A'}</Text>
                       </Descriptions.Item>
                     </Descriptions>
+                    
+                    <Divider />
+                    
+                    <div style={{ marginTop: 16 }}>
+                      <Button
+                        type="default"
+                        icon={<SettingOutlined />}
+                        onClick={() => setChangePasswordModalVisible(true)}
+                        block
+                      >
+                        Change Password
+                      </Button>
+                    </div>
                   </Col>
                 </Row>
               </Form>
@@ -2510,6 +2579,82 @@ const ProfileManagement = ({ profile, setProfile, loading, setLoading, user }) =
           </Spin>
         </Card>
       </motion.div>
+      
+      {/* Change Password Modal */}
+      <Modal
+        title="Change Password"
+        open={changePasswordModalVisible}
+        onCancel={() => {
+          setChangePasswordModalVisible(false);
+          passwordForm.resetFields();
+        }}
+        footer={null}
+        width={500}
+      >
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          onFinish={handleChangePassword}
+        >
+          <Form.Item
+            name="oldPassword"
+            label="Current Password"
+            rules={[{ required: true, message: 'Please enter your current password' }]}
+          >
+            <Input.Password placeholder="Enter current password" />
+          </Form.Item>
+          
+          <Form.Item
+            name="newPassword"
+            label="New Password"
+            rules={[
+              { required: true, message: 'Please enter a new password' },
+              {
+                validator: (_, value) => {
+                  const error = validatePassword(value);
+                  return error ? Promise.reject(new Error(error)) : Promise.resolve();
+                }
+              }
+            ]}
+            help="Password must be at least 8 characters, contain uppercase, lowercase, and special characters"
+          >
+            <Input.Password placeholder="Enter new password" />
+          </Form.Item>
+          
+          <Form.Item
+            name="confirmPassword"
+            label="Confirm New Password"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: 'Please confirm your new password' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('Passwords do not match'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="Confirm new password" />
+          </Form.Item>
+          
+          <Form.Item>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button onClick={() => {
+                setChangePasswordModalVisible(false);
+                passwordForm.resetFields();
+              }}>
+                Cancel
+              </Button>
+              <Button type="primary" htmlType="submit" loading={changingPassword}>
+                Change Password
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

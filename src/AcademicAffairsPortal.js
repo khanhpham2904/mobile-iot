@@ -352,30 +352,17 @@ function AcademicAffairsPortal({ user, onLogout }) {
 
   const handleImportStudents = async (file) => {
     try {
-      const response = await excelImportAPI.importAccounts(file, 'STUDENT');
+      // Use the class-specific import endpoint that handles SpreadsheetML XML format
+      const response = await excelImportAPI.importStudentsWithClasses(file);
       
-      if (response.success) {
-        notification.success({
-          message: 'Import Successful',
-          description: response.message,
-          placement: 'topRight',
-        });
-      } else {
-        notification.error({
-          message: 'Import Failed',
-          description: response.message,
-          placement: 'topRight',
-        });
-      }
-
-      if (response.errors && response.errors.length > 0) {
-        notification.warning({
-          message: 'Import Warnings',
-          description: `${response.errors.length} rows failed to import. Check console for details.`,
-          placement: 'topRight',
-        });
-        console.error('Import errors:', response.errors);
-      }
+      // The endpoint returns a string message like "Imported new students: X"
+      const message = typeof response === 'string' ? response : (response.message || response.raw || 'Import completed');
+      
+      notification.success({
+        message: 'Import Successful',
+        description: message,
+        placement: 'topRight',
+      });
 
       // Refresh students list
       await loadData();
@@ -383,7 +370,7 @@ function AcademicAffairsPortal({ user, onLogout }) {
       console.error('Import error:', error);
       notification.error({
         message: 'Import Failed',
-        description: 'Failed to import students. Please check file format.',
+        description: error.message || 'Failed to import students. Please check file format. Expected SpreadsheetML XML format.',
         placement: 'topRight',
       });
     }

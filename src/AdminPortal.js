@@ -237,12 +237,12 @@ function AdminPortal({ onLogout }) {
       
       // Fetch users from API
       try {
-        const usersResponse = await userAPI.getAllAccounts(0, 100); // Get first 100 users
-        console.log('Users response:', usersResponse);
+        const usersData = await userAPI.getAllAccounts(0, 100); // Get first 100 users
+        console.log('Users response:', usersData);
         
-        if (usersResponse && usersResponse.data && usersResponse.data.content) {
+        if (usersData && usersData.length > 0) {
           // Map ProfileResponse to user format for table
-          const mappedUsers = usersResponse.data.content.map(profile => ({
+          const mappedUsers = usersData.map(profile => ({
             id: profile.id,
             name: profile.fullName || profile.email || 'Unknown',
             email: profile.email,
@@ -4511,9 +4511,10 @@ const UserManagement = ({ users, setUsers }) => {
           if (response && response.email) {
             // Refresh users list from API
             try {
-              const usersResponse = await userAPI.getAllAccounts(0, 100);
-              if (usersResponse && usersResponse.data && usersResponse.data.content) {
-                const mappedUsers = usersResponse.data.content.map(profile => ({
+              const usersData = await userAPI.getAllAccounts(0, 100);
+              
+              if (usersData && usersData.length > 0) {
+                const mappedUsers = usersData.map(profile => ({
                   id: profile.id,
                   name: profile.fullName || profile.email || 'Unknown',
                   email: profile.email,
@@ -4583,9 +4584,10 @@ const UserManagement = ({ users, setUsers }) => {
         if (response && response.email) {
           // Backend returns RegisterResponse object, refresh users list from API
           try {
-            const usersResponse = await userAPI.getAllAccounts(0, 100);
-            if (usersResponse && usersResponse.data && usersResponse.data.content) {
-              const mappedUsers = usersResponse.data.content.map(profile => ({
+            const usersData = await userAPI.getAllAccounts(0, 100);
+            
+            if (usersData && usersData.length > 0) {
+              const mappedUsers = usersData.map(profile => ({
                 id: profile.id,
                 name: profile.fullName || profile.email || 'Unknown',
                 email: profile.email,

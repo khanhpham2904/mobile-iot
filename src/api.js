@@ -127,50 +127,10 @@ export const authAPI = {
       return token;
     } catch (error) {
       console.error('Login failed:', error);
-      throw error;
-    }
-  },
-
-  register: async (username, password, studentCode = null, roles = 'STUDENT', phoneNumber = null, fullName = null) => {
-    try {
-      const requestData = {
-        username,
-        password,
-        roles: roles.toUpperCase()
-      };
-      
-      // Only add studentCode if provided and role is STUDENT
-      if (studentCode && roles.toUpperCase() === 'STUDENT') {
-        requestData.studentCode = studentCode;
+      // Provide more helpful error messages
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        throw new Error(`Cannot connect to server at ${API_BASE_URL}. Please ensure the backend server is running on port 8080.`);
       }
-      
-      // Add phoneNumber if provided
-      if (phoneNumber) {
-        requestData.phoneNumber = phoneNumber;
-      }
-      
-      // Add fullName if provided
-      if (fullName) {
-        requestData.fullName = fullName;
-      }
-      
-      const response = await fetch(`${API_BASE_URL}/api/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Registration failed');
-      }
-      
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      console.error('Registration failed:', error);
       throw error;
     }
   },
@@ -214,6 +174,16 @@ export const authAPI = {
     });
   },
 
+  changePassword: async (oldPassword, newPassword) => {
+    return apiRequest('/api/me/change-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        oldPassword,
+        newPassword
+      }),
+    });
+  },
+
   isAuthenticated: () => {
     return !!getAuthToken();
   }
@@ -226,7 +196,9 @@ export const userAPI = {
   },
 
   getAllAccounts: async (page = 0, size = 10) => {
-    return apiRequest(`/api/admin/accounts?page=${page}&size=${size}`);
+    const response = await apiRequest(`/api/admin/accounts?page=${page}&size=${size}`);
+    // Handle different response formats: direct array, ApiResponse with array in data, or PageResponse
+    return extractArrayFromPayload(response);
   },
 
   createUser: async (userData) => {
@@ -787,6 +759,37 @@ export const excelImportAPI = {
         'Content-Type': 'application/json',
       },
     });
+  },
+
+  // Import students with class assignments (uses SpreadsheetML XML format)
+  importStudentsWithClasses: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // For FormData, we need to use fetch directly since apiRequest sets Content-Type to JSON
+    const url = `${API_BASE_URL}/api/classes/import-students`;
+    const token = getAuthToken();
+    
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    // Don't set Content-Type for FormData - browser will set it with boundary
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: headers,
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Import failed');
+    }
+    
+    // The endpoint returns a plain text string
+    const text = await response.text();
+    return text;
   }
 };
 
