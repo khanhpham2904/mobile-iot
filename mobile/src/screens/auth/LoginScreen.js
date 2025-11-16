@@ -88,15 +88,6 @@ const LoginScreen = () => {
               <Text style={styles.buttonText}>Login</Text>
             )}
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.registerButton}
-            onPress={() => navigation.navigate('Register')}
-          >
-            <Text style={styles.registerButtonText}>
-              New User? Register Here
-            </Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -155,14 +146,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  registerButton: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  registerButtonText: {
-    color: '#667eea',
-    fontSize: 14,
   },
 });
 
